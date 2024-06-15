@@ -1,92 +1,32 @@
-version: '3'
-
+version: '2'
 services:
-  nextcloud:
-    image: nextcloud
-    container_name: nextcloud
-    restart: unless-stopped
-    networks: 
-      - cloud
-    depends_on:
-      - nextclouddb
-      - redis
-    ports:
-      - 8081:80
-    volumes:
-      - ./html:/var/www/html
-      - ./custom_apps:/var/www/html/custom_apps
-      - ./config:/var/www/html/config
-      - ./data:/var/www/html/data
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Paris  # Update timezone to Europe/Paris
-      - MYSQL_DATABASE=nextcloud
-      - MYSQL_USER=nextcloud
-      - MYSQL_PASSWORD=dbpassword
-      - MYSQL_HOST=nextclouddb
-      - REDIS_HOST=redis
-
-  nextclouddb:
-    image: mariadb
-    container_name: nextcloud-db
-    restart: unless-stopped
+  db:
+    image: mariadb:10.5
+    restart: always
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
-    networks: 
-      - cloud
     volumes:
-      - ./nextclouddb:/var/lib/mysql
+      - db:/var/lib/mysql
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Paris  # Update timezone to Europe/Paris
-      - MYSQL_RANDOM_ROOT_PASSWORD=true
-      - MYSQL_PASSWORD=dbpassword
+      - MYSQL_ROOT_PASSWORD=admin
+      - MYSQL_PASSWORD=admin
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
-      
-  collabora:
-    image: collabora/code
-    container_name: collabora
-    restart: unless-stopped
-    networks: 
-      - cloud
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Paris  # Update timezone to Europe/Paris
-      - password=password
-      - username=nextcloud
-      - domain=example.com
-      - extra_params=--o:ssl.enable=true
-    ports:
-      - 9980:9980
 
-  redis:
-    image: redis:alpine
-    container_name: redis
-    volumes:
-      - ./redis:/data  
-    networks: 
-      - cloud
-  
-  nginx-proxy:
-    image: 'jc21/nginx-proxy-manager:latest'
-    container_name: nginx-proxy
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Paris  # Update timezone to Europe/Paris
-    restart: unless-stopped
+  app:
+    image: nextcloud
+    restart: always
     ports:
-      - '80:80'
-      - '81:81'
-      - '443:443'
+      - 8083:80
+    links:
+      - db
     volumes:
-      - ./data:/data
-      - ./letsencrypt:/etc/letsencrypt
+      - nextcloud:/var/www/html
+    environment:
+      - MYSQL_PASSWORD=admin
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_HOST=db
 
-networks:
-  cloud:
-    name: cloud
-    driver: bridge
+volumes:
+  nextcloud:
+  db:
